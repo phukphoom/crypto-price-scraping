@@ -1,1 +1,2 @@
 from .CryptoScrapDriver import CryptoScrapDriver
+from .CryptoScrapDriver import exchange_base_url

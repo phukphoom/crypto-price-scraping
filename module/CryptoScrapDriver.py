@@ -1,4 +1,3 @@
-from lib2to3.pgen2 import driver
 import re
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -6,7 +5,9 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
 # add other support exchange on this dict
-exchange_base_url = {"BITKUB": "https://www.bitkub.com"}
+exchange_base_url = {"BITKUB": "https://www.bitkub.com",
+                     "SATANG": "https://satangcorp.com",
+                     "BINANCE": "https://www.binance.com"}
 
 
 class CryptoScrapDriver:
@@ -44,20 +45,49 @@ class CryptoScrapDriver:
                 coin_prices = re.findall(
                     '[0-9,.]+', ''.join(coin_prices))
 
-                if len(coin_names) != len(coin_prices):
-                    raise Exception(
-                        f"({exchange}) : bug on regEx \(!!˚☐˚)/")
+            elif exchange == "SATANG":
+                fetch_url += '/exchange/en'
+                self.driver.get(fetch_url)
 
-                coin_datas = []
-                for i in range(0, len(coin_names)):
-                    coin_datas.append(
-                        {"symbol": coin_names[i], "price": self.__price_to_float__(coin_prices[i])})
+                coin_names = re.findall(
+                    '>[A-Z]+/</span>', self.driver.page_source)
+                coin_names = re.findall('[A-Z]+', ''.join(coin_names))
 
-                return coin_datas
+                coin_prices = re.findall(
+                    'NKpQ">[0-9,.]+</span>', self.driver.page_source)
+                coin_prices = re.findall(
+                    '[0-9,.]+', ''.join(coin_prices))
+
+            elif exchange == "BINANCE":
+                fetch_url += '/en/markets'
+                self.driver.get(exchange_base_url[exchange])
+                self.driver.add_cookie(
+                    {"name": "userPreferredCurrency", "value": "THB_USD", "path": "/", "domain": ".binance.com"})
+                self.driver.get(fetch_url)
+
+                coin_names = re.findall(
+                    '<div data-bn-type="text" class="css-1wp9rgv">[A-Z]+</div>', self.driver.page_source)
+                coin_names = re.findall('[A-Z]+', ''.join(coin_names))
+
+                coin_prices = re.findall(
+                    '<div data-bn-type="text" style="direction:ltr" class="css-ovtrou">฿[0-9,.]+</div>', self.driver.page_source)
+                coin_prices = re.findall(
+                    '[0-9,.]+', ''.join(coin_prices))
 
             ########################################
             # implement other exchange logic here #
             ########################################
+
+            if len(coin_names) != len(coin_prices):
+                raise Exception(
+                    f"({exchange}) : bug on regEx \(!!˚☐˚)/")
+
+            coin_datas = []
+            for i in range(0, len(coin_names)):
+                coin_datas.append(
+                    {"symbol": coin_names[i], "price": self.__price_to_float__(coin_prices[i])})
+
+            return coin_datas
 
         except Exception as error:
             return {'error': str(error)}
