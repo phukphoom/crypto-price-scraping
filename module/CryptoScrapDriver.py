@@ -28,66 +28,80 @@ class CryptoScrapDriver:
         log_file.close()
 
     def get_all_price_by_exchange(self, exchange: str) -> list or dict:
-        try:
-            if exchange.upper() not in exchange_base_url.keys():
-                raise Exception(f'Exchange({exchange}) is not support')
+        if exchange.upper() not in exchange_base_url.keys():
+            raise Exception(f'Exchange({exchange}) is not support')
 
-            fetch_url = exchange_base_url[exchange]
-            if exchange == "BITKUB":
-                self.driver.get(fetch_url)
+        fetch_url = exchange_base_url[exchange]
+        if exchange == "BITKUB":
+            self.driver.get(fetch_url)
 
-                coin_names = re.findall(
-                    'data-currency="[A-Z]+"', self.driver.page_source)
-                coin_names = re.findall('[A-Z]+', ''.join(coin_names))
+            coin_names = re.findall(
+                'data-currency="[A-Z]+"', self.driver.page_source)
+            coin_names = re.findall('[A-Z]+', ''.join(coin_names))
 
-                coin_prices = re.findall(
-                    '>[0-9,.]+ \(<i class="fa fa-caret', self.driver.page_source)
-                coin_prices = re.findall(
-                    '[0-9,.]+', ''.join(coin_prices))
+            coin_prices = re.findall(
+                '>[0-9,.]+ \(<i class="fa fa-caret', self.driver.page_source)
+            coin_prices = re.findall(
+                '[0-9,.]+', ''.join(coin_prices))
 
-            elif exchange == "SATANG":
-                fetch_url += '/exchange/en'
-                self.driver.get(fetch_url)
+        elif exchange == "SATANG":
+            fetch_url += '/exchange/en'
+            self.driver.get(fetch_url)
 
-                coin_names = re.findall(
-                    '>[A-Z]+/</span>', self.driver.page_source)
-                coin_names = re.findall('[A-Z]+', ''.join(coin_names))
+            coin_names = re.findall(
+                '>[A-Z]+/</span>', self.driver.page_source)
+            coin_names = re.findall('[A-Z]+', ''.join(coin_names))
 
-                coin_prices = re.findall(
-                    'NKpQ">[0-9,.]+</span>', self.driver.page_source)
-                coin_prices = re.findall(
-                    '[0-9,.]+', ''.join(coin_prices))
+            coin_prices = re.findall(
+                'NKpQ">[0-9,.]+</span>', self.driver.page_source)
+            coin_prices = re.findall(
+                '[0-9,.]+', ''.join(coin_prices))
 
-            elif exchange == "BINANCE":
-                fetch_url += '/en/markets'
-                self.driver.get(exchange_base_url[exchange])
-                self.driver.add_cookie(
-                    {"name": "userPreferredCurrency", "value": "THB_USD", "path": "/", "domain": ".binance.com"})
-                self.driver.get(fetch_url)
+        elif exchange == "BINANCE":
+            fetch_url += '/en/markets'
+            self.driver.get(exchange_base_url[exchange])
+            self.driver.add_cookie(
+                {"name": "userPreferredCurrency", "value": "THB_USD", "path": "/", "domain": ".binance.com"})
+            self.driver.get(fetch_url)
 
-                coin_names = re.findall(
-                    '<div data-bn-type="text" class="css-1wp9rgv">[A-Z]+</div>', self.driver.page_source)
-                coin_names = re.findall('[A-Z]+', ''.join(coin_names))
+            coin_names = re.findall(
+                '<div data-bn-type="text" class="css-1wp9rgv">[A-Z]+</div>', self.driver.page_source)
+            coin_names = re.findall('[A-Z]+', ''.join(coin_names))
 
-                coin_prices = re.findall(
-                    '<div data-bn-type="text" style="direction:ltr" class="css-ovtrou">฿[0-9,.]+</div>', self.driver.page_source)
-                coin_prices = re.findall(
-                    '[0-9,.]+', ''.join(coin_prices))
+            coin_prices = re.findall(
+                '<div data-bn-type="text" style="direction:ltr" class="css-ovtrou">฿[0-9,.]+</div>', self.driver.page_source)
+            coin_prices = re.findall(
+                '[0-9,.]+', ''.join(coin_prices))
 
-            ########################################
-            # implement other exchange logic here #
-            ########################################
+        ########################################
+        # implement other exchange logic here #
+        ########################################
 
-            if len(coin_names) != len(coin_prices):
-                raise Exception(
-                    f"({exchange}) : bug on regEx \(!!˚☐˚)/")
+        if len(coin_names) != len(coin_prices):
+            raise Exception(
+                f"({exchange}) : bug on regEx \(!!˚☐˚)/")
 
-            coin_datas = []
-            for i in range(0, len(coin_names)):
-                coin_datas.append(
-                    {"symbol": coin_names[i], "price": self.__price_to_float__(coin_prices[i])})
+        coin_datas = []
+        for i in range(0, len(coin_names)):
+            coin_datas.append(
+                {"symbol": coin_names[i], "price": self.__price_to_float__(coin_prices[i])})
 
-            return coin_datas
+        return coin_datas
 
-        except Exception as error:
-            return {'error': str(error)}
+    def get_all_crypto_datas(self) -> list or dict:
+        crypto_datas = []
+        for exchange in exchange_base_url.keys():
+            crypto_datas.append(
+                {"exchange": exchange, "data": self.get_all_price_by_exchange(exchange)})
+
+        return crypto_datas
+
+    def get_all_support_symbols(self) -> list or dict:
+        support_symbols_datas = []
+        for exchange in exchange_base_url.keys():
+            crypto_list = self.get_all_price_by_exchange(exchange)
+            for data in crypto_list:
+                if data['symbol'] not in support_symbols_datas:
+                    support_symbols_datas.append(data['symbol'])
+
+        return support_symbols_datas
