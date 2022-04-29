@@ -7,7 +7,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 # add other support exchange on this dict
 exchange_base_url = {"BITKUB": "https://www.bitkub.com",
                      "SATANG": "https://satangcorp.com",
-                     "BINANCE": "https://www.binance.com"}
+                     "BINANCE": "https://www.binance.com",
+                     "BITAZZA": "https://trade.bitazza.com"}
 
 
 class CryptoScrapDriver:
@@ -36,8 +37,8 @@ class CryptoScrapDriver:
             self.driver.get(fetch_url)
 
             coin_names = re.findall(
-                'data-currency="[A-Z]+"', self.driver.page_source)
-            coin_names = re.findall('[A-Z]+', ''.join(coin_names))
+                'data-currency="[(0-9)|(A-Z)]+"', self.driver.page_source)
+            coin_names = re.findall('[(0-9)|(A-Z)]+', ''.join(coin_names))
 
             coin_prices = re.findall(
                 '>[0-9,.]+ \(<i class="fa fa-caret', self.driver.page_source)
@@ -49,8 +50,8 @@ class CryptoScrapDriver:
             self.driver.get(fetch_url)
 
             coin_names = re.findall(
-                '>[A-Z]+/</span>', self.driver.page_source)
-            coin_names = re.findall('[A-Z]+', ''.join(coin_names))
+                '>[(0-9)|(A-Z)]+/</span>', self.driver.page_source)
+            coin_names = re.findall('[(0-9)|(A-Z)]+', ''.join(coin_names))
 
             coin_prices = re.findall(
                 'NKpQ">[0-9,.]+</span>', self.driver.page_source)
@@ -65,11 +66,29 @@ class CryptoScrapDriver:
             self.driver.get(fetch_url)
 
             coin_names = re.findall(
-                '<div data-bn-type="text" class="css-1wp9rgv">[A-Z]+</div>', self.driver.page_source)
-            coin_names = re.findall('[A-Z]+', ''.join(coin_names))
+                'rgv">[(0-9)|(A-Z)]+</div>', self.driver.page_source)
+            coin_names = re.findall('[(0-9)|(A-Z)]+', ''.join(coin_names))
 
             coin_prices = re.findall(
-                '<div data-bn-type="text" style="direction:ltr" class="css-ovtrou">฿[0-9,.]+</div>', self.driver.page_source)
+                'css-ovtrou">฿[0-9,.]+</div>', self.driver.page_source)
+            coin_prices = re.findall(
+                '[0-9,.]+', ''.join(coin_prices))
+
+        elif exchange == "BITAZZA":
+            fetch_url += '/th/exchange'
+            self.driver.get(fetch_url)
+            self.driver.implicitly_wait(3)
+            element = self.driver.find_element_by_css_selector(
+                "button.instrument-selector__trigger")
+            element.click()
+            self.driver.implicitly_wait(3)
+
+            coin_names = re.findall(
+                '">[(0-9)|(A-Z)]+/', self.driver.page_source)
+            coin_names = re.findall('[(0-9)|(A-Z)]+', ''.join(coin_names))
+
+            coin_prices = re.findall(
+                '<div class="flex-table__column instrument-selector-popup__column instrument-selector-popup__column--price"><div>[0-9,.]+</div></div>', self.driver.page_source)
             coin_prices = re.findall(
                 '[0-9,.]+', ''.join(coin_prices))
 
@@ -91,15 +110,23 @@ class CryptoScrapDriver:
     def get_all_crypto_datas(self) -> list or dict:
         crypto_datas = []
         for exchange in exchange_base_url.keys():
-            crypto_datas.append(
-                {"exchange": exchange, "data": self.get_all_price_by_exchange(exchange)})
+            try:
+                crypto_datas.append(
+                    {"exchange": exchange, "data": self.get_all_price_by_exchange(exchange)})
+            except Exception:
+                crypto_datas.append(
+                    {"exchange": exchange, "data": []})
 
         return crypto_datas
 
     def get_all_support_symbols(self) -> list or dict:
         support_symbols_datas = []
         for exchange in exchange_base_url.keys():
-            crypto_list = self.get_all_price_by_exchange(exchange)
+            try:
+                crypto_list = self.get_all_price_by_exchange(exchange)
+            except Exception:
+                crypto_list = []
+
             for data in crypto_list:
                 if data['symbol'] not in support_symbols_datas:
                     support_symbols_datas.append(data['symbol'])
